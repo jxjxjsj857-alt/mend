@@ -207,10 +207,17 @@ function tierKey(line: string, tier: number): string {
 function occurrencesFrom(lines: string[], o: string[], tier: number, from: number): number[] {
   const out: number[] = [];
   if (o.length === 0) return out;
-  for (let i = Math.max(0, from); i + o.length <= lines.length; i++) {
+  // Key each line once: the naive loop re-keyed every candidate line for every
+  // line of O, which is O(n*m) string work and can blow the 10 s per-check
+  // budget on a large file with many near-matches. Same matches, same order.
+  const oKeys = o.map((l) => tierKey(l, tier));
+  const start = Math.max(0, from);
+  const fileKeys: string[] = new Array(lines.length);
+  for (let i = start; i < lines.length; i++) fileKeys[i] = tierKey(lines[i]!, tier);
+  for (let i = start; i + o.length <= lines.length; i++) {
     let ok = true;
     for (let j = 0; j < o.length; j++) {
-      if (tierKey(lines[i + j]!, tier) !== tierKey(o[j]!, tier)) {
+      if (fileKeys[i + j] !== oKeys[j]) {
         ok = false;
         break;
       }
